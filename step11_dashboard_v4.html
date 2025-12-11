@@ -1,0 +1,894 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AQI Prediction Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0f0f1a;
+            min-height: 100vh;
+            color: white;
+        }
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .logo {
+            font-size: 1.5em;
+            font-weight: 700;
+        }
+        .logo span {
+            color: #3498db;
+        }
+        .header-info {
+            text-align: right;
+            font-size: 0.9em;
+            opacity: 0.7;
+        }
+        
+        /* Main Grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 20px;
+        }
+        
+        /* Left Panel */
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        /* Today's AQI Card */
+        .today-panel {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            border-radius: 24px;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .today-panel::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.3; }
+        }
+        .today-content {
+            position: relative;
+            z-index: 1;
+        }
+        .today-emoji {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+        .today-label {
+            font-size: 1em;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+        .today-value {
+            font-size: 5em;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 10px;
+        }
+        .today-category {
+            font-size: 1.4em;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        .today-advice {
+            font-size: 0.9em;
+            opacity: 0.95;
+            line-height: 1.4;
+            margin-bottom: 15px;
+        }
+        .today-comparison {
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            padding: 10px;
+            font-size: 0.85em;
+        }
+        
+        /* Mini Stats */
+        .mini-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .mini-stat {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .mini-stat-value {
+            font-size: 1.5em;
+            font-weight: 700;
+            margin-bottom: 3px;
+        }
+        .mini-stat-label {
+            font-size: 0.75em;
+            opacity: 0.6;
+        }
+        
+        /* Week Overview */
+        .week-overview {
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 15px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .week-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 12px;
+            opacity: 0.8;
+        }
+        .week-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .week-bar-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .week-bar-label {
+            font-size: 0.75em;
+            width: 70px;
+            opacity: 0.7;
+        }
+        .week-bar-container {
+            flex: 1;
+            height: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .week-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+        }
+        .week-bar-count {
+            font-size: 0.8em;
+            font-weight: 600;
+            width: 30px;
+            text-align: right;
+        }
+        
+        /* Quick Actions */
+        .quick-actions {
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 15px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .quick-actions-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 12px;
+            opacity: 0.8;
+        }
+        .action-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 10px;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+        .action-item:last-child {
+            margin-bottom: 0;
+        }
+        .action-icon {
+            font-size: 1.3em;
+        }
+        .action-text {
+            flex: 1;
+        }
+        .action-status {
+            font-size: 0.75em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+        .status-safe { background: #27ae60; }
+        .status-caution { background: #f1c40f; color: #333; }
+        .status-danger { background: #e74c3c; }
+        
+        /* Right Panel */
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        /* Quick Stats Row */
+        .quick-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .stat-icon {
+            font-size: 1.5em;
+            margin-bottom: 8px;
+        }
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .stat-label {
+            font-size: 0.8em;
+            opacity: 0.6;
+        }
+        .stat-good { color: #27ae60; }
+        .stat-moderate { color: #f1c40f; }
+        .stat-bad { color: #e74c3c; }
+        .stat-blue { color: #3498db; }
+        
+        /* Forecast Section */
+        .forecast-section {
+            background: rgba(255,255,255,0.03);
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .section-title {
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+        .trend-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.1);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+        
+        /* 7-Day Cards */
+        .forecast-cards {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .day-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 15px 8px;
+            text-align: center;
+            border: 2px solid transparent;
+        }
+        .day-card.best {
+            border-color: #27ae60;
+            box-shadow: 0 0 20px rgba(39, 174, 96, 0.3);
+        }
+        .day-card.worst {
+            border-color: #e74c3c;
+            box-shadow: 0 0 20px rgba(231, 76, 60, 0.3);
+        }
+        .day-card.today {
+            border-color: #3498db;
+            background: rgba(52, 152, 219, 0.15);
+        }
+        .day-name {
+            font-size: 0.75em;
+            opacity: 0.6;
+            margin-bottom: 3px;
+        }
+        .day-date {
+            font-size: 0.85em;
+            margin-bottom: 10px;
+            opacity: 0.8;
+        }
+        .day-value {
+            font-size: 1.6em;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .day-category {
+            font-size: 0.65em;
+            padding: 4px 8px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+        .day-badge {
+            font-size: 0.7em;
+            margin-top: 8px;
+            padding: 3px 8px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+        }
+        
+        /* Chart Container */
+        .chart-container {
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            padding: 15px;
+        }
+        
+        /* Bottom Grid */
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        /* Pollutants Section */
+        .pollutants-section {
+            background: rgba(255,255,255,0.03);
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .pollutant-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        .pollutant-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 15px;
+        }
+        .pollutant-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .pollutant-name {
+            font-weight: 600;
+        }
+        .pollutant-value {
+            font-size: 1.3em;
+            font-weight: 700;
+        }
+        .pollutant-bar {
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .pollutant-fill {
+            height: 100%;
+            border-radius: 3px;
+        }
+        .pollutant-status {
+            font-size: 0.75em;
+            margin-top: 5px;
+            opacity: 0.7;
+        }
+        
+        /* Health Section */
+        .health-section {
+            background: rgba(255,255,255,0.03);
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .health-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        .health-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .health-icon {
+            font-size: 1.8em;
+        }
+        .health-content {
+            flex: 1;
+        }
+        .health-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+            font-size: 0.95em;
+        }
+        .health-text {
+            font-size: 0.8em;
+            opacity: 0.7;
+            line-height: 1.4;
+        }
+        
+        /* Alert Section */
+        .alert-section {
+            background: linear-gradient(135deg, rgba(231,76,60,0.2), rgba(192,57,43,0.2));
+            border: 1px solid rgba(231,76,60,0.3);
+            border-radius: 16px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .alert-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .alert-icon {
+            font-size: 1.5em;
+        }
+        .alert-title {
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+        .alert-groups {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .alert-group {
+            background: rgba(255,255,255,0.1);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 30px;
+            opacity: 0.5;
+            font-size: 0.85em;
+            margin-top: 20px;
+        }
+        
+        /* Category Colors */
+        .cat-good { background: #27ae60; color: white; }
+        .cat-moderate { background: #f1c40f; color: #333; }
+        .cat-unhealthy-sg { background: #e67e22; color: white; }
+        .cat-unhealthy { background: #e74c3c; color: white; }
+        
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .main-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .quick-stats { grid-template-columns: repeat(2, 1fr); }
+            .forecast-cards { grid-template-columns: repeat(4, 1fr); }
+            .bottom-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">AQI<span>Predict</span></div>
+            <div class="header-info">
+                <div>Last Updated: December 11, 2025 16:21</div>
+                <div>Model: TCN (Accuracy: 89.08%)</div>
+            </div>
+        </div>
+        
+        <!-- Main Grid -->
+        <div class="main-grid">
+            <!-- Left Panel -->
+            <div class="left-panel">
+                <!-- Today's AQI Card -->
+                <div class="today-panel">
+                    <div class="today-content">
+                        <div class="today-emoji">😊</div>
+                        <div class="today-label">Today's Air Quality (Dec 11)</div>
+                        <div class="today-value">28</div>
+                        <div class="today-category">Good</div>
+                        <div class="today-advice">Air quality is excellent. Perfect for outdoor activities!</div>
+                        <div class="today-comparison">
+                            Actual AQI: <strong>31</strong> | 
+                            Error: <strong>3.0</strong> points
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Mini Stats -->
+                <div class="mini-stats">
+                    <div class="mini-stat">
+                        <div class="mini-stat-value stat-blue">3.9</div>
+                        <div class="mini-stat-label">Avg Error (AQI)</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-value stat-good">89.08%</div>
+                        <div class="mini-stat-label">Model Accuracy</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-value stat-moderate">28</div>
+                        <div class="mini-stat-label">Avg Predicted</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-value" style="color: #9b59b6;">31</div>
+                        <div class="mini-stat-label">Avg Actual</div>
+                    </div>
+                </div>
+                
+                <!-- Week Overview -->
+                <div class="week-overview">
+                    <div class="week-title">📊 Last 7 Days Category Breakdown</div>
+                    <div class="week-bars">
+                        <div class="week-bar-item">
+                            <span class="week-bar-label">Good</span>
+                            <div class="week-bar-container">
+                                <div class="week-bar-fill" style="width: 100%; background: #27ae60;"></div>
+                            </div>
+                            <span class="week-bar-count stat-good">7</span>
+                        </div>
+                        <div class="week-bar-item">
+                            <span class="week-bar-label">Moderate</span>
+                            <div class="week-bar-container">
+                                <div class="week-bar-fill" style="width: 0%; background: #f1c40f;"></div>
+                            </div>
+                            <span class="week-bar-count stat-moderate">0</span>
+                        </div>
+                        <div class="week-bar-item">
+                            <span class="week-bar-label">Unhealthy</span>
+                            <div class="week-bar-container">
+                                <div class="week-bar-fill" style="width: 0%; background: #e74c3c;"></div>
+                            </div>
+                            <span class="week-bar-count stat-bad">0</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    <div class="quick-actions-title">⚡ Today's Recommendations</div>
+                    <div class="action-item">
+                        <span class="action-icon">🏃</span>
+                        <span class="action-text">Outdoor Exercise</span>
+                        <span class="action-status status-safe">
+                            Safe
+                        </span>
+                    </div>
+                    <div class="action-item">
+                        <span class="action-icon">🪟</span>
+                        <span class="action-text">Open Windows</span>
+                        <span class="action-status status-safe">
+                            Yes
+                        </span>
+                    </div>
+                    <div class="action-item">
+                        <span class="action-icon">😷</span>
+                        <span class="action-text">Wear Mask</span>
+                        <span class="action-status status-safe">
+                            Not Needed
+                        </span>
+                    </div>
+                    <div class="action-item">
+                        <span class="action-icon">👶</span>
+                        <span class="action-text">Children Outdoor</span>
+                        <span class="action-status status-safe">
+                            Safe
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Panel -->
+            <div class="right-panel">
+                <!-- Quick Stats -->
+                <div class="quick-stats">
+                    <div class="stat-card">
+                        <div class="stat-icon">➡️</div>
+                        <div class="stat-value" style="color: #3498db">Stable</div>
+                        <div class="stat-label">7-Day Trend</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">✅</div>
+                        <div class="stat-value stat-good">Dec 05</div>
+                        <div class="stat-label">Best Day (27 AQI)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⚠️</div>
+                        <div class="stat-value stat-bad">Dec 11</div>
+                        <div class="stat-label">Worst Day (28 AQI)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-value stat-blue">27-28</div>
+                        <div class="stat-label">AQI Range</div>
+                    </div>
+                </div>
+                
+                <!-- 7-Day History -->
+                <div class="forecast-section">
+                    <div class="section-header">
+                        <div class="section-title">📅 Last 7 Days: Predicted vs Actual</div>
+                        <div class="trend-badge" style="color: #3498db">
+                            <span>➡️</span>
+                            <span>Stable (+1.1 AQI)</span>
+                        </div>
+                    </div>
+                    
+                    <div class="forecast-cards" id="forecast-cards"></div>
+                    
+                    <div class="chart-container">
+                        <div id="main-chart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bottom Grid -->
+        <div class="bottom-grid" style="margin-top: 20px;">
+            <!-- Pollutants -->
+            <div class="pollutants-section">
+                <div class="section-title" style="margin-bottom: 15px;">Today's Pollutant Levels</div>
+                <div class="pollutant-grid">
+                    <div class="pollutant-card">
+                        <div class="pollutant-header">
+                            <span class="pollutant-name">NO₂</span>
+                            <span class="pollutant-value">22.5</span>
+                        </div>
+                        <div style="font-size: 0.75em; opacity: 0.6;">Nitrogen Dioxide (ppb)</div>
+                        <div class="pollutant-bar">
+                            <div class="pollutant-fill" style="width: 42%; background: #27ae60;"></div>
+                        </div>
+                        <div class="pollutant-status">Safe limit: 53 ppb</div>
+                    </div>
+                    <div class="pollutant-card">
+                        <div class="pollutant-header">
+                            <span class="pollutant-name">SO₂</span>
+                            <span class="pollutant-value">7.7</span>
+                        </div>
+                        <div style="font-size: 0.75em; opacity: 0.6;">Sulfur Dioxide (ppb)</div>
+                        <div class="pollutant-bar">
+                            <div class="pollutant-fill" style="width: 22%; background: #27ae60;"></div>
+                        </div>
+                        <div class="pollutant-status">Safe limit: 35 ppb</div>
+                    </div>
+                    <div class="pollutant-card">
+                        <div class="pollutant-header">
+                            <span class="pollutant-name">CO</span>
+                            <span class="pollutant-value">0.67</span>
+                        </div>
+                        <div style="font-size: 0.75em; opacity: 0.6;">Carbon Monoxide (ppm)</div>
+                        <div class="pollutant-bar">
+                            <div class="pollutant-fill" style="width: 15%; background: #27ae60;"></div>
+                        </div>
+                        <div class="pollutant-status">Safe limit: 4.4 ppm</div>
+                    </div>
+                    <div class="pollutant-card">
+                        <div class="pollutant-header">
+                            <span class="pollutant-name">O₃</span>
+                            <span class="pollutant-value">45.0</span>
+                        </div>
+                        <div style="font-size: 0.75em; opacity: 0.6;">Ozone (ppb)</div>
+                        <div class="pollutant-bar">
+                            <div class="pollutant-fill" style="width: 64%; background: #27ae60;"></div>
+                        </div>
+                        <div class="pollutant-status">Safe limit: 70 ppb</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Health Recommendations -->
+            <div class="health-section">
+                <div class="section-title" style="margin-bottom: 15px;">Health Recommendations</div>
+                <div class="health-grid">
+                    <div class="health-card">
+                        <div class="health-icon">🏃</div>
+                        <div class="health-content">
+                            <div class="health-title">Outdoor Exercise</div>
+                            <div class="health-text" id="tip-exercise">Loading...</div>
+                        </div>
+                    </div>
+                    <div class="health-card">
+                        <div class="health-icon">😷</div>
+                        <div class="health-content">
+                            <div class="health-title">Mask Advisory</div>
+                            <div class="health-text" id="tip-mask">Loading...</div>
+                        </div>
+                    </div>
+                    <div class="health-card">
+                        <div class="health-icon">🪟</div>
+                        <div class="health-content">
+                            <div class="health-title">Ventilation</div>
+                            <div class="health-text" id="tip-vent">Loading...</div>
+                        </div>
+                    </div>
+                    <div class="health-card">
+                        <div class="health-icon">👶</div>
+                        <div class="health-content">
+                            <div class="health-title">Children & Elderly</div>
+                            <div class="health-text" id="tip-sensitive">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert-section" id="alert-section" style="display: none;">
+                    <div class="alert-header">
+                        <span class="alert-icon">⚠️</span>
+                        <span class="alert-title">Sensitive Groups Should Take Precaution</span>
+                    </div>
+                    <div class="alert-groups">
+                        <div class="alert-group"><span>👶</span> Children</div>
+                        <div class="alert-group"><span>👴</span> Elderly (65+)</div>
+                        <div class="alert-group"><span>🫁</span> Asthma</div>
+                        <div class="alert-group"><span>❤️</span> Heart Conditions</div>
+                        <div class="alert-group"><span>🤰</span> Pregnant</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <p>AQI Prediction System | Final Year Project | SDG 3: Good Health and Well-Being</p>
+            <p>Model: TCN | Dataset: US Pollution Data (2000-2016) | Data shown: Dec 05 - Dec 11</p>
+        </div>
+    </div>
+    
+    <script>
+        // Data - PAST 7 DAYS
+        const dates = ["Dec 05", "Dec 06", "Dec 07", "Dec 08", "Dec 09", "Dec 10", "Dec 11"];
+        const dayNames = ["Friday", "Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"];
+        const predicted = [26.9, 27.5, 27.8, 28.0, 28.0, 27.8, 28.0];
+        const actual = [36.0, 27.0, 29.0, 31.0, 34.0, 32.0, 31.0];
+        const bestDayIdx = 0;
+        const worstDayIdx = 6;
+        const todayAQI = 28.01371955871582;
+        const todayIdx = 6; // Last day is today
+        
+        function getCategory(aqi) {
+            if (aqi <= 50) return { name: 'Good', class: 'cat-good', color: '#27ae60' };
+            if (aqi <= 100) return { name: 'Moderate', class: 'cat-moderate', color: '#f1c40f' };
+            if (aqi <= 150) return { name: 'USG', class: 'cat-unhealthy-sg', color: '#e67e22' };
+            if (aqi <= 200) return { name: 'Unhealthy', class: 'cat-unhealthy', color: '#e74c3c' };
+            return { name: 'Hazardous', class: 'cat-hazardous', color: '#7f0000' };
+        }
+        
+        // Generate cards
+        const cardsContainer = document.getElementById('forecast-cards');
+        dates.forEach((date, i) => {
+            const cat = getCategory(predicted[i]);
+            const isBest = i === bestDayIdx;
+            const isWorst = i === worstDayIdx;
+            const isToday = i === todayIdx;
+            
+            const card = document.createElement('div');
+            let classes = 'day-card';
+            if (isBest) classes += ' best';
+            if (isWorst) classes += ' worst';
+            if (isToday) classes += ' today';
+            card.className = classes;
+            
+            card.innerHTML = `
+                <div class="day-name">${dayNames[i]}</div>
+                <div class="day-date">${date}</div>
+                <div class="day-value" style="color: ${cat.color}">${predicted[i]}</div>
+                <div class="day-category ${cat.class}">${cat.name}</div>
+                ${isToday ? '<div class="day-badge" style="background: #3498db;">Today</div>' : ''}
+                ${isBest && !isToday ? '<div class="day-badge" style="background: #27ae60;">Best</div>' : ''}
+                ${isWorst && !isToday ? '<div class="day-badge" style="background: #e74c3c;">Worst</div>' : ''}
+            `;
+            cardsContainer.appendChild(card);
+        });
+        
+        // Chart
+        const trace1 = {
+            x: dates, y: predicted,
+            name: 'Predicted AQI',
+            type: 'scatter', mode: 'lines+markers',
+            line: { color: '#3498db', width: 3 },
+            marker: { size: 10 },
+            fill: 'tozeroy',
+            fillcolor: 'rgba(52, 152, 219, 0.1)'
+        };
+        
+        const trace2 = {
+            x: dates, y: actual,
+            name: 'Actual AQI',
+            type: 'scatter', mode: 'lines+markers',
+            line: { color: '#e74c3c', width: 3, dash: 'dash' },
+            marker: { size: 10, symbol: 'square' }
+        };
+        
+        const layout = {
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            font: { color: 'white' },
+            xaxis: { gridcolor: 'rgba(255,255,255,0.1)' },
+            yaxis: { 
+                gridcolor: 'rgba(255,255,255,0.1)',
+                title: 'AQI Value',
+                range: [0, Math.max(...predicted, ...actual) + 20]
+            },
+            legend: { x: 0, y: 1.15, orientation: 'h' },
+            margin: { t: 40, b: 40, l: 50, r: 20 },
+            shapes: [
+                { type: 'line', y0: 50, y1: 50, x0: dates[0], x1: dates[6], line: { color: 'rgba(39, 174, 96, 0.5)', width: 2, dash: 'dot' } },
+                { type: 'line', y0: 100, y1: 100, x0: dates[0], x1: dates[6], line: { color: 'rgba(241, 196, 15, 0.5)', width: 2, dash: 'dot' } }
+            ]
+        };
+        
+        Plotly.newPlot('main-chart', [trace1, trace2], layout, {responsive: true});
+        
+        // Health tips
+        let exerciseTip, maskTip, ventTip, sensitiveTip;
+        if (todayAQI <= 50) {
+            exerciseTip = "Perfect! All outdoor activities are safe.";
+            maskTip = "No mask needed. Enjoy fresh air!";
+            ventTip = "Open windows for natural ventilation.";
+            sensitiveTip = "Safe for all including children and elderly.";
+        } else if (todayAQI <= 100) {
+            exerciseTip = "Generally safe. Shorter sessions if sensitive.";
+            maskTip = "Optional for sensitive individuals.";
+            ventTip = "Ventilation is fine, monitor symptoms.";
+            sensitiveTip = "May want to limit prolonged activity.";
+            document.getElementById('alert-section').style.display = 'block';
+        } else {
+            exerciseTip = "Reduce intensity. Take frequent breaks.";
+            maskTip = "N95 recommended for outdoor activities.";
+            ventTip = "Limit ventilation. Use air purifier.";
+            sensitiveTip = "Should stay indoors.";
+            document.getElementById('alert-section').style.display = 'block';
+        }
+        
+        document.getElementById('tip-exercise').textContent = exerciseTip;
+        document.getElementById('tip-mask').textContent = maskTip;
+        document.getElementById('tip-vent').textContent = ventTip;
+        document.getElementById('tip-sensitive').textContent = sensitiveTip;
+    </script>
+</body>
+</html>
